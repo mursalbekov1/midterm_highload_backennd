@@ -1,4 +1,3 @@
-# bank/views.py
 from rest_framework import viewsets, generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -56,15 +55,20 @@ class TransferMoneyView(APIView):
         except User.DoesNotExist:
             return Response({'error': 'Recipient not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        if amount <= 0:
+        if not isinstance(amount, (int, float)) or amount <= 0:
             return Response({'error': 'Amount must be greater than zero.'}, status=status.HTTP_400_BAD_REQUEST)
 
         if sender.balance < amount:
             return Response({'error': 'Insufficient funds.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Перевод средств
         sender.balance -= amount
         recipient.balance += amount
         sender.save()
         recipient.save()
+
+        # Сохранение транзакции
+        transaction = Transaction(sender=sender, receiver=recipient, amount=amount)
+        transaction.save()
 
         return Response({'message': 'Transfer successful.'}, status=status.HTTP_200_OK)
